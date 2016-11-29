@@ -1,0 +1,105 @@
+---
+title: "Exploratory Analysis"
+author: "Chin-Cheng Liang"
+date: "11/30/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+
+theme_project <- theme_gray() +theme(text = element_text(family = "STHeiti"))
+theme_set(theme_project)
+```
+
+
+```{r}
+parade <- readRDS("data/parade.Rds")
+```
+
+```{r}
+parade %>% glimpse()
+```
+
+```{r}
+parade_more <- parade %>%
+  mutate(
+    date = as.Date(actStTime),
+    interval = actStTime %--% actEndTime,
+    city = str_extract(placeOrRoute, "^.{2}[縣|市]")
+    ) %>%
+  mutate(
+    duration = as.duration(interval),
+    year = year(date)
+    )
+
+parade_more %>% glimpse()
+```
+
+
+```{r}
+parade_more %>%
+  count(date) %>%
+  ggplot(aes(x=date, y=n)) +
+  geom_bar(stat = "identity") +
+  ggtitle("每日遊行集會數") +
+  xlab("日期") +
+  ylab("遊行集會計數")
+```
+
+```{r}
+parade_more %>% count(actCategory)
+```
+
+```{r}
+parade_more %>%
+  count(date, actCategory) %>%
+  filter(actCategory!="") %>%
+  ggplot(aes(x=date, y= n, fill= actCategory)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ actCategory, nrow = 2) +
+  xlab("日期") +
+  ylab("遊行集會計數")
+  
+```
+
+
+```{r}
+parade_more %>% 
+  mutate(duration =  as.numeric(duration)/3600) %>%
+  ggplot(aes(x=duration)) +
+  geom_histogram() +
+  ggtitle("遊行集會時間長短頻率") +
+  xlab("遊行時數") +
+  ylab("次數")
+```
+
+```{r}
+city_year_count <- parade_more %>%
+  count(year, city, sort = T) %>%
+  filter(city!="")
+
+city_year_plot <- function(specific_year){
+  city_year_count %>% filter(year == specific_year) %>%
+  ggplot(aes(x=reorder(city, -n), y= n, year, label=n)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab("日期") +
+  ylab("遊行集會計數") +
+  ggtitle(paste(specific_year, "年各縣市集會遊行計數")) +
+  geom_text(nudge_y = 50)
+}
+city_year_plot(2015)
+```
+
+```{r}
+city_year_plot(2016)
+```
+
